@@ -1,0 +1,96 @@
+# Rocketstudio-task
+
+<!-- !Disclaimer, this is not proper technical documentation, it's mostly a guide to the code and structure  -->
+
+# Introduction
+
+The assignment was to create a mini PHP website (preferably using the framework LARAVEL). The way that I interpreted the task was the following.
+Firstly create a CV submission form that consists of three names, date of birth a university and an array of technologies. The person can create a CV which is essentially only three names and a date of birth, but if they can update it with a university and technologies at a later time. From what I understood users weren't necessary. I was also required to add a button that lets the user add a technology or university to the selects asynchronously.
+Second page with two queries one that filters by date of birth and a second one that filters by createdAt and then sorts by date of birth.
+
+### Prerequisites
+
+I was using:
+
+-   PHP ~8.2.12
+-   Composer
+-   Laravel ~11.17.0
+-   Tailwind (already in layout.blade.php header)
+-   JQuery (also in layout.blade.php)
+
+### Database
+
+I decided to use the included SQLite since the project doesn't require anything too special.
+The structure is the following (I'll also include a picture in a separate file):
+
+Table names {
+names_id integer [primary key]
+fname string
+mname string
+lname string
+dob date
+}
+
+Table universities {
+university_id integer [primary key]
+university_name string
+university_score integer
+}
+
+Table technologies {
+technology_id integer [primary key]
+technology_name string
+}
+
+Table cvs {
+cv_id integer [primary key]
+name_id integer [ref: - names.names_id]
+university_id integer [ref: > universities.university_id]
+}
+
+Table cv*technologies /* pivot table \_/ {
+id integer [primary key]
+cv_id integer [ref: > cvs.cv_id]
+technology_id integer [ref: < technologies.technology_id]
+}
+
+### Starting and Testing
+
+To start the project using Visual Studio Code simply navigate to it in your most convenient way. Afterwards open a Terminal and run `php artisan serve` to start the server, then inside a second terminal run `npm run dev` to start the developer vite server.
+The project is now good to go with data I've provided. In case you'd like to fully reset the database you'll need to follow these steps:
+First open a terminal in VS code and type in `php artisan db:wipe`. The next step is to populate the database, run the following command `php artisan migrate` after it's finished run `php artisan db:seed` to seed the database (couldn't get `php artisan migrate:refresh --seed` to work).
+The last step would be to open a web browser and navigate to localhost. Alternatively you can also CTRL+LMB inside the IP address in the first terminal where we ran `php artisan serve`.
+
+### Web Routes
+
+You can find all the Web Routes inside the /routes/web.php file. I won't go over all of them, but in short we have a redirecting one, it sets the main page ('/') to index.blade.php. And a couple of POST ones assisting the JQueries. Lastly we have a couple GET routes that are used for the second page where we're visualizing results from the database. Also we have one that helps populate the selects inside index.blade.php.
+
+### Models
+
+We have four models. The first one is Name.php, this one is used to store the initial registration information - three names and a date of birth. It has a one-to-one relationship with the CVform model.
+The second one is University.php, it is used to store all of the different university names with their accreditation score. It has a one-to-many relationship with CVform.
+The third one is Technology it stores all different technologies (PHP, JS, etc.). It has a many-to-many relationship to CVform. In the database we use a pivot table to make this many-to-many relationship work.
+The last one is CVform. It essentially connects the name, and university tables.
+
+### Migrations
+
+The only migration that doesn't have a form is the pivot table one cv_technologies, so no explanation needed.
+
+### Controllers
+
+The UniversityController has an index() function, which is used for populating the universitySelect inside the index.blade.php view. The second function is the store() function used for adding universities via the pencil button in the index.blade.php view.
+The Technology controller is essentially the same thing, but without a index() function since I'm sending it's information through the UniversityController.
+We also have a CVformController. It also has an index() function, but it was only used for testing. The store() function however doesn't just add new entries to the database. It checks whether there is a person with the entered name and date of birth already exists in the database. If there is it updates the information about the Technologies or the University that they've previously either not submitted or are adding new skills to their CV.
+Lastly we have the SortController it has an index() function similar to the others. The sortByRange(Request $request) function however is unique to this controller. It receives the information from the AJAX request and uses it to sort the database to find people born withing a selected range. It sends over full information about their names, date of birth, university and technologies.
+The last function sortByCreate(Request $request) is similar, but it sorts by date the CV was submitted to the system and then orders the entries by the age of the candidates.
+
+### Views
+
+There are two folders of views, components and CV_form. The components folder has a layout.blade.php which stores the layout with all the scripts that make jquery work and other inserts. It also stores the CSRF token and the scripts that make the first page work. Three scripts per modal that show or hide the modal along with the one that contains the AJAX script that updates the selects without the need of refreshing the page. We also have the form submission script that also works the same way.
+The second file in the folder is navbar.blade.php. It stores a navbar generated by ChatGPT. All it has is text with routs to the two pages of the website.
+The CV_form folder has the index.blade.php file which is essentially the first page of the website. Sort.blade.php is the second page, but it stores it's scripts with the AJAX requests in itself (not sure if that's good practice, I did it to keep it simpler while developing). Lastly the show.blade.php is a view that was used for testing, it displays all saved CVs in the database.
+!NOTE: The styles were not created by me, they were generated using ChatGPT. There is no separate styles.css file, everything is in the blade views themselves.
+
+### Seeders and Factories
+
+Unfortunately I don't think I'll be able to properly make Factories for each model so I can make proper seeders to seed a lot of data quickly since I'm not very experienced with Laravel yet. That's why I'm uploading the project with some database entries.
